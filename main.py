@@ -1,69 +1,39 @@
-from fastapi import FastAPI
-import os
 import requests
 from bs4 import BeautifulSoup
-from typing import List
 
 
-app = FastAPI()
-
-
-RAPIDAPI_SECRET = os.getenv("RAPIDAPI_SECRET")
-
-
-@app.get("/")
-def read_root():
-    welcome_message = (
-        "Welcome!"
-        "¡Bienvenido!"
-        "欢迎!"
-        "नमस्ते!"
-        "مرحبًا!"
-        "Olá!"
-        "Здравствуйте!"
-        "Bonjour!"
-        "বাংলা!"
-        "こんにちは!"
-    )
-    return {"message": welcome_message}
-
-
-def scrape_ebay_search(query: str) -> List[dict]:
+def test_ebay_scraper(query="iphone 13"):
     query = query.replace(" ", "+")
     url = f"https://www.ebay.com/sch/i.html?_nkw={query}"
-
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
 
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        raise Exception(f"Failed to fetch page: {response.status_code}")
+        print("Failed to fetch page:", response.status_code)
+        return
 
     soup = BeautifulSoup(response.text, "html.parser")
-    results = soup.select(".s-item")
-    items = []
+    items = soup.select(".s-item")
 
-    for item in results:
-        title = item.select_one(".s-item__title")
-        price = item.select_one(".s-item__price")
-        url_tag = item.select_one(".s-item__link")
-        image = item.select_one(".s-item__image-img")
-        condition = item.select_one(".SECONDARY_INFO")
-        shipping = item.select_one(".s-item__shipping, .s-item__freeXDays")
+    if not items:
+        print("No items found. The layout may have changed.")
+        return
 
-        if not (title and price and url_tag):
-            continue
+    print(f"Found {len(items)} items. Showing first 5:\n")
 
-        items.append({
-            "title": title.get_text(strip=True),
-            "price": price.get_text(strip=True),
-            "condition": condition.get_text(strip=True) if condition else None,
-            "shipping": shipping.get_text(strip=True) if shipping else None,
-            "url": url_tag['href'],
-            "image": image['src'] if image else None
-        })
+    for item in items[:5]:
+        title_elem = item.select_one(".s-item__title")
+        price_elem = item.select_one(".s-item__price")
+        url_elem = item.select_one(".s-item__link")
 
-    return items
+        if title_elem and price_elem and url_elem:
+            print("Title:", title_elem.text.strip())
+            print("Price:", price_elem.text.strip())
+            print("URL:", url_elem['href'])
+            print("-" * 40)
 
 
+if __name__ == "__main__":
+    test_ebay_scraper()
