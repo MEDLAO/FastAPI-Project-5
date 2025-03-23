@@ -35,5 +35,33 @@ def test_ebay_scraper(query="iphone 13"):
             print("-" * 40)
 
 
+def scrape_ebay_categories() -> List[Dict]:
+    url = "https://www.ebay.com/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch eBay homepage: {response.status_code}")
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # eBay homepage categories are under <li class="hl-cat-nav__js-tab">
+    category_elements = soup.select("li.hl-cat-nav__js-tab > a")
+
+    categories = []
+    for cat in category_elements:
+        name = cat.get_text(strip=True)
+        link = cat["href"] if cat.has_attr("href") else None
+        if name and link:
+            categories.append({
+                "name": name,
+                "url": link
+            })
+
+    return categories
+
+
 if __name__ == "__main__":
     test_ebay_scraper()
