@@ -63,5 +63,44 @@ def scrape_ebay_categories() -> List[Dict]:
     return categories
 
 
+def scrape_ebay_deals() -> List[Dict]:
+    url = "https://www.ebay.com/deals"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch eBay deals page: {response.status_code}")
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    deal_elements = soup.select(".ebayui-dne-item-featured-card")  # main container for each deal
+
+    deals = []
+    for deal in deal_elements:
+        title_elem = deal.select_one(".dne-itemtile-title")
+        price_elem = deal.select_one(".dne-itemtile-price .first")
+        original_price_elem = deal.select_one(".itemtile-price-strikethrough")
+        url_elem = deal.select_one("a.dne-itemtile-detail")
+        image_elem = deal.select_one("img")
+
+        title = title_elem.get_text(strip=True) if title_elem else None
+        price = price_elem.get_text(strip=True) if price_elem else None
+        original_price = original_price_elem.get_text(strip=True) if original_price_elem else None
+        url = url_elem["href"] if url_elem and url_elem.has_attr("href") else None
+        image = image_elem["src"] if image_elem and image_elem.has_attr("src") else None
+
+        if title and price and url:
+            deals.append({
+                "title": title,
+                "price": price,
+                "original_price": original_price,
+                "url": url,
+                "image": image
+            })
+
+    return deals
+
+
 if __name__ == "__main__":
     test_ebay_scraper()
