@@ -102,5 +102,39 @@ def scrape_ebay_deals() -> List[Dict]:
     return deals
 
 
+def scrape_ebay_product(item_url: str) -> Dict:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
+    response = requests.get(item_url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch product page: {response.status_code}")
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    title_elem = soup.select_one("#itemTitle")
+    price_elem = soup.select_one("#prcIsum, #prcIsum_bidPrice, #mm-saleDscPrc")
+    specs_table = soup.select("div.itemAttr td.attrLabels, div.itemAttr td")
+
+    title = title_elem.get_text(strip=True).replace("Details about  ", "") if title_elem else None
+    price = price_elem.get_text(strip=True) if price_elem else None
+
+    # Extract key-value specs
+    specs = {}
+    for i in range(0, len(specs_table) - 1, 2):
+        label = specs_table[i].get_text(strip=True)
+        value = specs_table[i + 1].get_text(strip=True)
+        specs[label] = value
+
+    return {
+        "title": title,
+        "price": price,
+        "specs": specs,
+        "url": item_url
+    }
+
+
+
 if __name__ == "__main__":
     test_ebay_scraper()
