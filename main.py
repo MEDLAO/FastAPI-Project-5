@@ -1,47 +1,39 @@
-import json
+from playwright.sync_api import sync_playwright
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
+import random
 
 
-# ==== Configuration ====
-CHROMEDRIVER_PATH = "/path/to/chromedriver"  # Update this
-COOKIES_FILE = "linkedin_cookies.json"
-PROFILE_URL = "https://www.linkedin.com/in/YOUR_USERNAME_HERE/"
+def create_linkedin_account(name, email, password):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False, slow_mo=100)  # set headless=True later
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent=random.choice([
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                "Mozilla/5.0 (X11; Linux x86_64)"
+            ])
+        )
+        page = context.new_page()
 
-# ==== Setup Selenium ====
-options = webdriver.ChromeOptions()
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-# options.add_argument("--headless")  # Uncomment for headless mode
+        print("Opening LinkedIn signup page...")
+        page.goto("https://www.linkedin.com/signup")
 
-driver = webdriver.Chrome(service=Service(CHROMEDRIVER_PATH), options=options)
-driver.get("https://www.linkedin.com/")
+        time.sleep(2)
+        print("Filling email and password...")
+        page.fill("input[name='email-or-phone']", email)
+        page.fill("input[name='password']", password)
+        page.click("button[type='submit']")
 
-# ==== Load Cookies ====
-with open(COOKIES_FILE, "r") as f:
-    cookies = json.load(f)
+        time.sleep(3)
 
-for cookie in cookies:
-    if 'sameSite' in cookie:
-        del cookie['sameSite']  # Avoid issues with ChromeDriver
-    driver.add_cookie(cookie)
+        print("Filling name...")
+        page.fill("input#first-name", name.split()[0])
+        page.fill("input#last-name", name.split()[1])
+        page.click("button[type='submit']")
 
-# ==== Load Your Profile ====
-driver.get(PROFILE_URL)
-time.sleep(5)
+        time.sleep(3)
 
-# ==== Scrape Data ====
-try:
-    name = driver.find_element(By.CSS_SELECTOR, "h1").text
-    headline = driver.find_element(By.CSS_SELECTOR, "div.text-body-medium").text
-    location = driver.find_element(By.CSS_SELECTOR, "span.text-body-small.inline").text
-
-    print("Name:", name)
-    print("Headline:", headline)
-    print("Location:", location)
-except Exception as e:
-    print("Error while scraping:", e)
-
-driver.quit()
+        # Stop before confirmation step
+        print("Stopped at confirmation step. Complete email verification manually.")
+        browser.close()
